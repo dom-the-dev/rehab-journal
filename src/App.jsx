@@ -8,9 +8,13 @@ import { RunLibrary } from './components/RunLibrary';
 import { useIsMobile } from './hooks/useIsMobile';
 import { Activity, Dumbbell, Footprints, CalendarDays, Cloud, CloudOff, Loader, ChevronLeft } from 'lucide-react';
 import { RehabInfo } from './components/RehabInfo';
+import { Stats } from './components/Stats';
+
+import { BarChart2 } from 'lucide-react';
 
 const NAV = [
   { id: 'journal', label: 'Journal', icon: CalendarDays },
+  { id: 'stats', label: 'Statistik', icon: BarChart2 },
   { id: 'workouts', label: 'Workouts', icon: Dumbbell },
   { id: 'runs', label: 'Läufe', icon: Footprints },
 ];
@@ -99,6 +103,7 @@ export default function App() {
               />
             </div>
           )}
+          {view === 'stats' && <Stats days={store.days} workoutTemplates={store.workoutTemplates} />}
           {view === 'workouts' && <WorkoutLibrary workoutTemplates={store.workoutTemplates} onSave={store.saveWorkoutTemplate} onDelete={store.deleteWorkoutTemplate} />}
           {view === 'runs' && <RunLibrary runTemplates={store.runTemplates} onSave={store.saveRunTemplate} onDelete={store.deleteRunTemplate} />}
         </main>

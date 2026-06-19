@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { formatDate, painColor, toDateKey } from '../utils';
 import { PainScale } from './PainScale';
 import { Btn, Input, Textarea, Modal } from './ui';
-import { Plus, Trash2, Dumbbell, Footprints, Check, ChevronLeft, ChevronRight, Moon, StickyNote } from 'lucide-react';
+import { Plus, Trash2, Dumbbell, Footprints, Check, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Moon, StickyNote } from 'lucide-react';
 
 function offsetDate(dateKey, days) {
   const [y, m, d] = dateKey.split('-').map(Number);
@@ -65,11 +65,21 @@ function WorkoutCard({ entry, onRemove, onUpdateEntry, onSaveGlobal }) {
           <Dumbbell size={16} color={workoutDone ? 'var(--green)' : 'var(--brand)'} />
           <span style={{ fontWeight: 700, fontSize: 14, flex: 1 }}>{entry.name}</span>
           {workoutDone && <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 700 }}>✓ Fertig!</span>}
-          <button onClick={() => setOpen(o => !o)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
-            {open ? '▲' : `${completedExCount}/${entry.exercises.length}`}
+          <button onClick={() => setOpen(o => !o)} style={{
+            width: 36, height: 36, borderRadius: 8, border: '1px solid var(--border)',
+            background: 'var(--bg-3)', color: 'var(--text-muted)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            WebkitTapHighlightColor: 'transparent',
+          }}>
+            {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
-          <button onClick={onRemove} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer' }}>
-            <Trash2 size={14} />
+          <button onClick={onRemove} style={{
+            width: 36, height: 36, borderRadius: 8, border: '1px solid var(--red)44',
+            background: 'var(--red)11', color: 'var(--red)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            WebkitTapHighlightColor: 'transparent',
+          }}>
+            <Trash2 size={16} />
           </button>
         </div>
         {(progress > 0 || workoutDone) && (
@@ -155,8 +165,13 @@ function RunCard({ entry, onRemove }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <Footprints size={16} color="#38bdf8" />
         <span style={{ fontWeight: 600, fontSize: 14, flex: 1 }}>{entry.name}</span>
-        <button onClick={onRemove} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer' }}>
-          <Trash2 size={14} />
+        <button onClick={onRemove} style={{
+          width: 36, height: 36, borderRadius: 8, border: '1px solid var(--red)44',
+          background: 'var(--red)11', color: 'var(--red)', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          WebkitTapHighlightColor: 'transparent',
+        }}>
+          <Trash2 size={16} />
         </button>
       </div>
       <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>

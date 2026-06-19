@@ -155,6 +155,7 @@ export default function App() {
             nextRehabDate={nextRehabDate}
           />
         )}
+        {view === 'stats' && <Stats days={store.days} workoutTemplates={store.workoutTemplates} />}
         {view === 'workouts' && <WorkoutLibrary workoutTemplates={store.workoutTemplates} onSave={store.saveWorkoutTemplate} onDelete={store.deleteWorkoutTemplate} />}
         {view === 'runs' && <RunLibrary runTemplates={store.runTemplates} onSave={store.saveRunTemplate} onDelete={store.deleteRunTemplate} />}
       </main>

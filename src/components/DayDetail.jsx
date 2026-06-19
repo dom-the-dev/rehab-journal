@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { formatDate, painColor, toDateKey } from '../utils';
 import { PainScale } from './PainScale';
 import { Btn, Input, Textarea, Modal } from './ui';
-import { Plus, Trash2, Dumbbell, Footprints, Pencil, Check, Globe, ChevronLeft, ChevronRight, Moon, StickyNote } from 'lucide-react';
+import { Plus, Trash2, Dumbbell, Footprints, Check, ChevronLeft, ChevronRight, Moon, StickyNote } from 'lucide-react';
 
 function offsetDate(dateKey, days) {
   const [y, m, d] = dateKey.split('-').map(Number);
@@ -20,118 +20,129 @@ function PainBadge({ label, value }) {
   );
 }
 
+function parseSets(setsStr) {
+  const n = parseInt(setsStr);
+  return isNaN(n) || n < 1 ? 1 : Math.min(n, 20);
+}
+
 function WorkoutCard({ entry, onRemove, onUpdateEntry, onSaveGlobal }) {
-  const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [exercises, setExercises] = useState(entry.exercises);
-  const [saved, setSaved] = useState(false);
+  const [open, setOpen] = useState(true);
+  const debounceRef = useRef(null);
 
-  function updateEx(i, field, value) {
-    setExercises(prev => {
-      const next = [...prev];
-      next[i] = { ...next[i], [field]: value };
-      return next;
-    });
+  const checked = entry.setsChecked || {};
+  const totalSets = entry.exercises.reduce((s, ex) => s + parseSets(ex.sets), 0);
+  const doneSets = Object.values(checked).reduce((s, n) => s + n, 0);
+  const completedExCount = entry.exercises.filter((ex, i) => (checked[i] || 0) >= parseSets(ex.sets)).length;
+  const workoutDone = completedExCount === entry.exercises.length && entry.exercises.length > 0;
+  const progress = totalSets > 0 ? doneSets / totalSets : 0;
+
+  function toggleSet(exIndex, setIndex) {
+    const exSets = parseSets(entry.exercises[exIndex]?.sets);
+    const current = checked[exIndex] || 0;
+    const next = setIndex < current ? setIndex : setIndex + 1;
+    const updated = { ...entry, setsChecked: { ...checked, [exIndex]: Math.min(next, exSets) } };
+    onUpdateEntry(updated);
   }
 
-  function commitLocal() {
-    onUpdateEntry({ ...entry, exercises });
-    setEditing(false);
-  }
-
-  function commitGlobal() {
-    onUpdateEntry({ ...entry, exercises });
-    onSaveGlobal({ ...entry, exercises });
-    setEditing(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
-
-  function cancelEdit() {
-    setExercises(entry.exercises);
-    setEditing(false);
+  function updateEx(exIdx, field, value) {
+    const exercises = entry.exercises.map((ex, i) => i === exIdx ? { ...ex, [field]: value } : ex);
+    const updated = { ...entry, exercises };
+    onUpdateEntry(updated);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => onSaveGlobal({ ...updated, id: updated.templateId }), 800);
   }
 
   return (
-    <div style={{ background: 'var(--bg-4)', border: '1px solid var(--border-light)', borderRadius: 10, overflow: 'hidden' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}>
-        <Dumbbell size={16} color="var(--brand)" />
-        <span style={{ fontWeight: 600, fontSize: 14, flex: 1 }}>{entry.name}</span>
-        {saved && <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 600 }}>✓ Global gespeichert</span>}
-        <button
-          onClick={() => { setOpen(o => !o); if (!open) setEditing(false); }}
-          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}
-        >
-          {open ? 'Einklappen' : `${entry.exercises.length} Übungen`}
-        </button>
-        <button onClick={onRemove} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer' }}>
-          <Trash2 size={14} />
-        </button>
+    <div style={{
+      background: 'var(--bg-4)',
+      border: `1px solid ${workoutDone ? 'var(--green)' : 'var(--border-light)'}`,
+      borderRadius: 12, overflow: 'hidden',
+      transition: 'border-color 0.3s',
+    }}>
+      {/* Header */}
+      <div style={{ padding: '12px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: progress > 0 ? 10 : 0 }}>
+          <Dumbbell size={16} color={workoutDone ? 'var(--green)' : 'var(--brand)'} />
+          <span style={{ fontWeight: 700, fontSize: 14, flex: 1 }}>{entry.name}</span>
+          {workoutDone && <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 700 }}>✓ Fertig!</span>}
+          <button onClick={() => setOpen(o => !o)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer' }}>
+            {open ? '▲' : `${completedExCount}/${entry.exercises.length}`}
+          </button>
+          <button onClick={onRemove} style={{ background: 'none', border: 'none', color: 'var(--red)', cursor: 'pointer' }}>
+            <Trash2 size={14} />
+          </button>
+        </div>
+        {(progress > 0 || workoutDone) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ flex: 1, height: 4, background: 'var(--bg-3)', borderRadius: 2, overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: 2, background: workoutDone ? 'var(--green)' : 'var(--brand)', width: `${Math.round(progress * 100)}%`, transition: 'width 0.3s ease' }} />
+            </div>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>{doneSets}/{totalSets} Sätze</span>
+          </div>
+        )}
       </div>
 
+      {/* Exercises — always editable */}
       {open && (
-        <div style={{ borderTop: '1px solid var(--border)', padding: '10px 14px' }}>
-          {!editing ? (
-            <>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ color: 'var(--text-muted)' }}>
-                    <th style={{ textAlign: 'left', padding: '4px 8px 4px 0', fontWeight: 500 }}>Übung</th>
-                    <th style={{ textAlign: 'center', padding: '4px 8px', fontWeight: 500 }}>Sätze</th>
-                    <th style={{ textAlign: 'center', padding: '4px 8px', fontWeight: 500 }}>Wdh./Sek.</th>
-                    <th style={{ textAlign: 'center', padding: '4px 8px', fontWeight: 500 }}>Gewicht</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {entry.exercises.map((ex, i) => (
-                    <tr key={i} style={{ borderTop: '1px solid var(--border)' }}>
-                      <td style={{ padding: '6px 8px 6px 0' }}>
-                        <div>{ex.name}</div>
-                        {ex.note && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{ex.note}</div>}
-                      </td>
-                      <td style={{ textAlign: 'center', padding: '6px 8px' }}>{ex.sets || '—'}</td>
-                      <td style={{ textAlign: 'center', padding: '6px 8px' }}>{ex.reps || '—'}</td>
-                      <td style={{ textAlign: 'center', padding: '6px 8px' }}>{ex.weight || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
-                <Btn size="sm" variant="ghost" onClick={() => { setExercises(entry.exercises); setEditing(true); }}>
-                  <Pencil size={12} style={{ display: 'inline', marginRight: 4 }} />
-                  Bearbeiten
-                </Btn>
-              </div>
-            </>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {exercises.map((ex, i) => (
-                <div key={i} style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 10 }}>
-                  <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: 'var(--text)' }}>{ex.name}</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                    <Input label="Sätze" value={ex.sets} onChange={v => updateEx(i, 'sets', v)} placeholder="3" />
-                    <Input label="Wdh. / Sek." value={ex.reps} onChange={v => updateEx(i, 'reps', v)} placeholder="10 / 30s" />
-                    <Input label="Gewicht" value={ex.weight} onChange={v => updateEx(i, 'weight', v)} placeholder="60kg" />
-                  </div>
-                  <div style={{ marginTop: 8 }}>
-                    <Input label="Notiz" value={ex.note} onChange={v => updateEx(i, 'note', v)} placeholder="Optional" />
-                  </div>
+        <div style={{ borderTop: '1px solid var(--border)' }}>
+          {entry.exercises.map((ex, exIdx) => {
+            const setCount = parseSets(ex.sets);
+            const done = checked[exIdx] || 0;
+            const exDone = done >= setCount;
+            return (
+              <div key={exIdx} style={{
+                padding: '14px 14px',
+                borderBottom: exIdx < entry.exercises.length - 1 ? '1px solid var(--border)' : 'none',
+                background: exDone ? '#22c55e0a' : 'transparent',
+                transition: 'background 0.3s',
+              }}>
+                {/* Name + done indicator */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <span style={{
+                    fontSize: 14, fontWeight: 700,
+                    color: exDone ? 'var(--green)' : 'var(--text)',
+                    textDecoration: exDone ? 'line-through' : 'none',
+                    transition: 'all 0.2s',
+                  }}>{ex.name}</span>
+                  {exDone && <Check size={16} color="var(--green)" />}
                 </div>
-              ))}
 
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', paddingTop: 4 }}>
-                <Btn size="sm" variant="ghost" onClick={cancelEdit}>Abbrechen</Btn>
-                <Btn size="sm" variant="secondary" onClick={commitLocal}>
-                  <Check size={12} style={{ display: 'inline', marginRight: 4 }} />
-                  Nur heute
-                </Btn>
-                <Btn size="sm" onClick={commitGlobal}>
-                  <Globe size={12} style={{ display: 'inline', marginRight: 4 }} />
-                  Global speichern
-                </Btn>
+                {/* Inputs — always visible */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
+                  <Input label="Sätze" value={ex.sets} onChange={v => updateEx(exIdx, 'sets', v)} placeholder="3" />
+                  <Input label="Wdh. / Sek." value={ex.reps} onChange={v => updateEx(exIdx, 'reps', v)} placeholder="10 / 30s" />
+                  <Input label="Gewicht" value={ex.weight} onChange={v => updateEx(exIdx, 'weight', v)} placeholder="60kg" />
+                </div>
+                {(ex.note !== undefined) && (
+                  <div style={{ marginBottom: 12 }}>
+                    <Input label="Notiz" value={ex.note || ''} onChange={v => updateEx(exIdx, 'note', v)} placeholder="Optional" />
+                  </div>
+                )}
+
+                {/* Set chips */}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {Array.from({ length: setCount }, (_, si) => {
+                    const isChecked = si < done;
+                    return (
+                      <button key={si} onClick={() => toggleSet(exIdx, si)} style={{
+                        width: 44, height: 44, borderRadius: '50%',
+                        border: `2px solid ${isChecked ? 'var(--green)' : 'var(--border-light)'}`,
+                        background: isChecked ? 'var(--green)' : 'transparent',
+                        color: isChecked ? '#000' : 'var(--text-muted)',
+                        fontSize: 14, fontWeight: 700,
+                        cursor: 'pointer', transition: 'all 0.15s',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        WebkitTapHighlightColor: 'transparent', flexShrink: 0,
+                      }}>
+                        {isChecked ? <Check size={16} /> : si + 1}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })}
+
         </div>
       )}
     </div>

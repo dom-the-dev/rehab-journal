@@ -123,6 +123,23 @@ export function useStore() {
     updateDay(dateKey, { runs: [...(day.runs || []), entry] });
   }
 
+  function addDirectRunToDay(dateKey, { km, timeStr }) {
+    const day = getDay(dateKey);
+    const [minPart, secPart] = timeStr.includes(':') ? timeStr.split(':').map(Number) : [Number(timeStr), 0];
+    const totalMin = minPart + (secPart || 0) / 60;
+    const pace = km > 0 ? (totalMin / km).toFixed(2) : null;
+    const entry = {
+      id: Date.now().toString(),
+      name: `${km} km Lauf`,
+      distance: String(km),
+      time: timeStr,
+      pace: pace ? `${Math.floor(pace)}:${String(Math.round((pace % 1) * 60)).padStart(2, '0')}` : '',
+      wb: null,
+      s2: null,
+    };
+    updateDay(dateKey, { runs: [...(day.runs || []), entry] });
+  }
+
   function removeWorkoutFromDay(dateKey, entryId) {
     const day = getDay(dateKey);
     updateDay(dateKey, { workouts: (day.workouts || []).filter(w => w.id !== entryId) });
@@ -164,7 +181,7 @@ export function useStore() {
     status,
     getDay,
     updateDay,
-    addWorkoutToDay, addRunToDay,
+    addWorkoutToDay, addRunToDay, addDirectRunToDay,
     removeWorkoutFromDay, removeRunFromDay,
     saveWorkoutTemplate, deleteWorkoutTemplate,
     saveRunTemplate, deleteRunTemplate,

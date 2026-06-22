@@ -106,7 +106,6 @@ function WorkoutCard({ entry, onRemove, onUpdateEntry, onSaveGlobal }) {
                 background: exDone ? '#22c55e0a' : 'transparent',
                 transition: 'background 0.3s',
               }}>
-                {/* Name + done indicator */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <span style={{
                     fontSize: 14, fontWeight: 700,
@@ -116,8 +115,6 @@ function WorkoutCard({ entry, onRemove, onUpdateEntry, onSaveGlobal }) {
                   }}>{ex.name}</span>
                   {exDone && <Check size={16} color="var(--green)" />}
                 </div>
-
-                {/* Inputs — always visible */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
                   <Input label="Sätze" value={ex.sets} onChange={v => updateEx(exIdx, 'sets', v)} placeholder="3" />
                   <Input label="Wdh. / Sek." value={ex.reps} onChange={v => updateEx(exIdx, 'reps', v)} placeholder="10 / 30s" />
@@ -128,8 +125,6 @@ function WorkoutCard({ entry, onRemove, onUpdateEntry, onSaveGlobal }) {
                     <Input label="Notiz" value={ex.note || ''} onChange={v => updateEx(exIdx, 'note', v)} placeholder="Optional" />
                   </div>
                 )}
-
-                {/* Set chips */}
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {Array.from({ length: setCount }, (_, si) => {
                     const isChecked = si < done;
@@ -153,18 +148,57 @@ function WorkoutCard({ entry, onRemove, onUpdateEntry, onSaveGlobal }) {
             );
           })}
 
+          {/* WB + S2 per workout */}
+          <div style={{ padding: '16px 14px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <PainScale label="WB – Wohlbefinden während Workout" value={entry.wb ?? null} onChange={v => onUpdateEntry({ ...entry, wb: v })} />
+            <div style={{ borderTop: '1px solid var(--border)' }} />
+            <PainScale label="S2 – Wohlbefinden danach" sublabel="(nach Training)" value={entry.s2 ?? null} onChange={v => onUpdateEntry({ ...entry, s2: v })} />
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function RunCard({ entry, onRemove }) {
+function calcPace(km, timeStr) {
+  if (!km || !timeStr) return '';
+  const [m, s] = timeStr.includes(':') ? timeStr.split(':').map(Number) : [Number(timeStr), 0];
+  const totalMin = m + (s || 0) / 60;
+  const pace = Number(km) > 0 ? totalMin / Number(km) : null;
+  if (!pace) return '';
+  return `${Math.floor(pace)}:${String(Math.round((pace % 1) * 60)).padStart(2, '0')}`;
+}
+
+function RunCard({ entry, onRemove, onUpdateEntry }) {
+  const [open, setOpen] = useState(true);
+
+  function update(field, value) {
+    const updated = { ...entry, [field]: value };
+    if (field === 'distance' || field === 'time') {
+      updated.pace = calcPace(
+        field === 'distance' ? value : entry.distance,
+        field === 'time' ? value : entry.time,
+      );
+      updated.name = `${field === 'distance' ? value : entry.distance} km Lauf`;
+    }
+    onUpdateEntry(updated);
+  }
+
+  const pace = entry.pace || calcPace(entry.distance, entry.time);
+
   return (
-    <div style={{ background: 'var(--bg-4)', border: '1px solid var(--border-light)', borderRadius: 10, padding: '10px 14px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    <div style={{ background: 'var(--bg-4)', border: '1px solid var(--border-light)', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
         <Footprints size={16} color="#38bdf8" />
-        <span style={{ fontWeight: 600, fontSize: 14, flex: 1 }}>{entry.name}</span>
+        <span style={{ fontWeight: 700, fontSize: 14, flex: 1 }}>{entry.name}</span>
+        <button onClick={() => setOpen(o => !o)} style={{
+          width: 36, height: 36, borderRadius: 8, border: '1px solid var(--border)',
+          background: 'var(--bg-3)', color: 'var(--text-muted)', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          WebkitTapHighlightColor: 'transparent',
+        }}>
+          {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
         <button onClick={onRemove} style={{
           width: 36, height: 36, borderRadius: 8, border: '1px solid var(--red)44',
           background: 'var(--red)11', color: 'var(--red)', cursor: 'pointer',
@@ -174,37 +208,142 @@ function RunCard({ entry, onRemove }) {
           <Trash2 size={16} />
         </button>
       </div>
-      <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          <span style={{ fontWeight: 700, fontSize: 18, color: '#38bdf8' }}>{entry.distance}</span>
-          <span style={{ marginLeft: 3 }}>km</span>
-        </div>
-        {entry.pace && (
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            <span style={{ fontWeight: 700, fontSize: 18, color: 'var(--text)' }}>{entry.pace}</span>
-            <span style={{ marginLeft: 3 }}>min/km</span>
+      {open && (
+        <div style={{ borderTop: '1px solid var(--border)', padding: '14px 14px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Editable fields */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <Input label="Distanz (km)" value={entry.distance || ''} onChange={v => update('distance', v)} placeholder="5.2" type="number" />
+            <Input label="Zeit (mm:ss)" value={entry.time || ''} onChange={v => update('time', v)} placeholder="25:30" />
           </div>
-        )}
-      </div>
-      {entry.intervals?.length > 0 && (
-        <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-          {entry.intervals.map((iv, i) => (
-            <span key={i} style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 6, padding: '2px 8px', fontSize: 11, color: '#38bdf8' }}>
-              {iv.distance}km @ {iv.pace}
-            </span>
-          ))}
+          {/* Stats summary */}
+          {pace && (
+            <div style={{
+              background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 10,
+              padding: '10px 14px', display: 'flex', gap: 20,
+            }}>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', marginBottom: 1 }}>Distanz</div>
+                <span style={{ fontWeight: 800, fontSize: 18, color: '#38bdf8' }}>{entry.distance}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 3 }}>km</span>
+              </div>
+              {entry.time && <div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', marginBottom: 1 }}>Zeit</div>
+                <span style={{ fontWeight: 800, fontSize: 18, color: 'var(--text)' }}>{entry.time}</span>
+              </div>}
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', marginBottom: 1 }}>Pace</div>
+                <span style={{ fontWeight: 800, fontSize: 18, color: 'var(--green)' }}>{pace}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 3 }}>min/km</span>
+              </div>
+            </div>
+          )}
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <PainScale label="WB – Wohlbefinden während Lauf" value={entry.wb ?? null} onChange={v => onUpdateEntry({ ...entry, wb: v })} />
+            <div style={{ borderTop: '1px solid var(--border)' }} />
+            <PainScale label="S2 – Wohlbefinden danach" sublabel="(nach Lauf)" value={entry.s2 ?? null} onChange={v => onUpdateEntry({ ...entry, s2: v })} />
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-export function DayDetail({ dateKey, dayData, workoutTemplates, runTemplates, onUpdateDay, onAddWorkout, onAddRun, onRemoveWorkout, onRemoveRun, onSaveWorkoutTemplate, onNavigate, nextRunDate, nextRehabDate }) {
+function RunForm({ onAdd, onClose }) {
+  const [km, setKm] = useState('');
+  const [time, setTime] = useState('');
+
+  const totalMin = (() => {
+    if (!time) return null;
+    const [m, s] = time.includes(':') ? time.split(':').map(Number) : [Number(time), 0];
+    return m + (s || 0) / 60;
+  })();
+  const pace = totalMin && Number(km) > 0 ? totalMin / Number(km) : null;
+  const paceStr = pace
+    ? `${Math.floor(pace)}:${String(Math.round((pace % 1) * 60)).padStart(2, '0')}`
+    : null;
+
+  function handleAdd() {
+    if (!km || !time) return;
+    onAdd({ km: Number(km), timeStr: time });
+    onClose();
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 200,
+      display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+    }}>
+      <div onClick={onClose} style={{ flex: 1, background: '#00000066' }} />
+      <div style={{
+        background: 'var(--bg-2)', borderRadius: '20px 20px 0 0',
+        padding: '24px 20px 36px', display: 'flex', flexDirection: 'column', gap: 20,
+        borderTop: '1px solid var(--border)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Footprints size={16} color="#38bdf8" />
+            <span style={{ fontWeight: 700, fontSize: 16 }}>Lauf eintragen</span>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}>×</button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <Input label="Distanz (km)" value={km} onChange={setKm} placeholder="5.2" type="number" />
+          <Input label="Zeit (mm:ss)" value={time} onChange={setTime} placeholder="25:30" />
+        </div>
+
+        {paceStr && (
+          <div style={{
+            background: 'var(--bg-4)', border: '1px solid var(--border)', borderRadius: 12,
+            padding: '12px 16px', display: 'flex', gap: 24,
+          }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Distanz</div>
+              <span style={{ fontWeight: 800, fontSize: 20, color: '#38bdf8' }}>{km}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 3 }}>km</span>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Zeit</div>
+              <span style={{ fontWeight: 800, fontSize: 20, color: 'var(--text)' }}>{time}</span>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>Pace</div>
+              <span style={{ fontWeight: 800, fontSize: 20, color: 'var(--green)' }}>{paceStr}</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 3 }}>min/km</span>
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={handleAdd}
+          disabled={!km || !time}
+          style={{
+            background: !km || !time ? 'var(--bg-4)' : 'var(--brand)',
+            color: !km || !time ? 'var(--text-dim)' : '#000',
+            border: 'none', borderRadius: 12, padding: '14px 0',
+            fontWeight: 700, fontSize: 15, cursor: !km || !time ? 'default' : 'pointer',
+            transition: 'all 0.15s',
+          }}
+        >
+          Lauf speichern
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function DayDetail({ dateKey, dayData, workoutTemplates, onUpdateDay, onAddWorkout, onAddRun, onRemoveWorkout, onRemoveRun, onSaveWorkoutTemplate, onNavigate, nextRunDate, nextRehabDate }) {
   const [addModal, setAddModal] = useState(null);
+  const [showRunForm, setShowRunForm] = useState(false);
 
   function updateWorkoutEntry(entryId, updated) {
     const workouts = dayData.workouts.map(w => w.id === entryId ? updated : w);
     onUpdateDay({ workouts });
+  }
+
+  function updateRunEntry(entryId, updated) {
+    const runs = dayData.runs.map(r => r.id === entryId ? updated : r);
+    onUpdateDay({ runs });
   }
 
   return (
@@ -229,9 +368,7 @@ export function DayDetail({ dateKey, dayData, workoutTemplates, runTemplates, on
           </button>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <PainBadge label="WB" value={dayData.wb} />
           <PainBadge label="S1" value={dayData.s1} />
-          <PainBadge label="S2" value={dayData.s2} />
           {dayData.workouts?.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-4)', borderRadius: 8, padding: '4px 10px' }}>
               <Dumbbell size={12} color="var(--brand)" />
@@ -293,18 +430,6 @@ export function DayDetail({ dateKey, dayData, workoutTemplates, runTemplates, on
         <PainScale label="S1 – Wohlbefinden morgens" value={dayData.s1} onChange={v => onUpdateDay({ s1: v })} />
       </div>
 
-      {/* WB + S2 – Tagesverlauf */}
-      <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 14, padding: 18 }}>
-        <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>
-          Tagesverlauf
-        </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <PainScale label="WB – Wohlbefinden während Übung" value={dayData.wb} onChange={v => onUpdateDay({ wb: v })} />
-          <div style={{ borderTop: '1px solid var(--border)' }} />
-          <PainScale label="S2 – Wohlbefinden danach" sublabel="(nach Training)" value={dayData.s2} onChange={v => onUpdateDay({ s2: v })} />
-        </div>
-      </div>
-
       {/* Workouts */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -335,7 +460,7 @@ export function DayDetail({ dateKey, dayData, workoutTemplates, runTemplates, on
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
           <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Läufe</h3>
-          <Btn size="sm" onClick={() => setAddModal('run')}>
+          <Btn size="sm" onClick={() => setShowRunForm(true)}>
             <Plus size={12} style={{ display: 'inline', marginRight: 4 }} />Hinzufügen
           </Btn>
         </div>
@@ -346,7 +471,7 @@ export function DayDetail({ dateKey, dayData, workoutTemplates, runTemplates, on
             </div>
           )}
           {dayData.runs?.map(entry => (
-            <RunCard key={entry.id} entry={entry} onRemove={() => onRemoveRun(entry.id)} />
+            <RunCard key={entry.id} entry={entry} onRemove={() => onRemoveRun(entry.id)} onUpdateEntry={updated => updateRunEntry(entry.id, updated)} />
           ))}
         </div>
       </div>
@@ -410,29 +535,8 @@ export function DayDetail({ dateKey, dayData, workoutTemplates, runTemplates, on
         </Modal>
       )}
 
-      {addModal === 'run' && (
-        <Modal title="Lauf hinzufügen" onClose={() => setAddModal(null)}>
-          {runTemplates.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', fontSize: 14, textAlign: 'center', padding: '24px 0' }}>
-              Keine Läufe definiert. Erstelle erst Lauf-Vorlagen in der Bibliothek.
-            </p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {runTemplates.map(tpl => (
-                <button key={tpl.id} onClick={() => { onAddRun(tpl.id); setAddModal(null); }} style={{
-                  background: 'var(--bg-4)', border: '1px solid var(--border-light)',
-                  borderRadius: 10, padding: '12px 16px', color: 'var(--text)', textAlign: 'left', cursor: 'pointer',
-                }}>
-                  <div style={{ fontWeight: 600, marginBottom: 2 }}>{tpl.name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                    {tpl.distance} km · {tpl.pace} min/km
-                    {tpl.intervals?.length > 0 ? ` · ${tpl.intervals.length} Intervalle` : ''}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </Modal>
+      {showRunForm && (
+        <RunForm onAdd={onAddRun} onClose={() => setShowRunForm(false)} />
       )}
     </div>
   );

@@ -4,9 +4,8 @@ import { today, getNextDueDate } from './utils';
 import { Calendar } from './components/Calendar';
 import { DayDetail } from './components/DayDetail';
 import { WorkoutLibrary } from './components/WorkoutLibrary';
-import { RunLibrary } from './components/RunLibrary';
 import { useIsMobile } from './hooks/useIsMobile';
-import { Activity, Dumbbell, Footprints, CalendarDays, Cloud, CloudOff, Loader, ChevronLeft } from 'lucide-react';
+import { Activity, Dumbbell, CalendarDays, Cloud, CloudOff, Loader, ChevronLeft } from 'lucide-react';
 import { RehabInfo } from './components/RehabInfo';
 import { Stats } from './components/Stats';
 
@@ -16,7 +15,6 @@ const NAV = [
   { id: 'journal', label: 'Journal', icon: CalendarDays },
   { id: 'stats', label: 'Statistik', icon: BarChart2 },
   { id: 'workouts', label: 'Workouts', icon: Dumbbell },
-  { id: 'runs', label: 'Läufe', icon: Footprints },
 ];
 
 function SyncIndicator({ status }) {
@@ -90,10 +88,10 @@ export default function App() {
               </div>
               <DayDetail
                 dateKey={selectedDay} dayData={dayData}
-                workoutTemplates={store.workoutTemplates} runTemplates={store.runTemplates}
+                workoutTemplates={store.workoutTemplates}
                 onUpdateDay={patch => store.updateDay(selectedDay, patch)}
                 onAddWorkout={id => store.addWorkoutToDay(selectedDay, id)}
-                onAddRun={id => store.addRunToDay(selectedDay, id)}
+                onAddRun={data => store.addDirectRunToDay(selectedDay, data)}
                 onRemoveWorkout={id => store.removeWorkoutFromDay(selectedDay, id)}
                 onRemoveRun={id => store.removeRunFromDay(selectedDay, id)}
                 onSaveWorkoutTemplate={store.saveWorkoutTemplate}
@@ -105,7 +103,6 @@ export default function App() {
           )}
           {view === 'stats' && <Stats days={store.days} workoutTemplates={store.workoutTemplates} />}
           {view === 'workouts' && <WorkoutLibrary workoutTemplates={store.workoutTemplates} onSave={store.saveWorkoutTemplate} onDelete={store.deleteWorkoutTemplate} />}
-          {view === 'runs' && <RunLibrary runTemplates={store.runTemplates} onSave={store.saveRunTemplate} onDelete={store.deleteRunTemplate} />}
         </main>
       </div>
     );
@@ -143,10 +140,10 @@ export default function App() {
         {view === 'journal' && mobileScreen === 'day' && (
           <DayDetail
             dateKey={selectedDay} dayData={dayData}
-            workoutTemplates={store.workoutTemplates} runTemplates={store.runTemplates}
+            workoutTemplates={store.workoutTemplates}
             onUpdateDay={patch => store.updateDay(selectedDay, patch)}
             onAddWorkout={id => store.addWorkoutToDay(selectedDay, id)}
-            onAddRun={id => store.addRunToDay(selectedDay, id)}
+            onAddRun={data => store.addDirectRunToDay(selectedDay, data)}
             onRemoveWorkout={id => store.removeWorkoutFromDay(selectedDay, id)}
             onRemoveRun={id => store.removeRunFromDay(selectedDay, id)}
             onSaveWorkoutTemplate={store.saveWorkoutTemplate}

@@ -91,6 +91,7 @@ export default function App() {
                 workoutTemplates={store.workoutTemplates}
                 onUpdateDay={patch => store.updateDay(selectedDay, patch)}
                 onAddWorkout={id => store.addWorkoutToDay(selectedDay, id)}
+                onAddCustomWorkout={name => store.addCustomWorkoutToDay(selectedDay, name)}
                 onAddRun={data => store.addDirectRunToDay(selectedDay, data)}
                 onRemoveWorkout={id => store.removeWorkoutFromDay(selectedDay, id)}
                 onRemoveRun={id => store.removeRunFromDay(selectedDay, id)}

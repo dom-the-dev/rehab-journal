@@ -272,9 +272,11 @@ function RunForm({ onAdd, onClose }) {
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
       display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+      alignItems: 'center',
     }}>
-      <div onClick={onClose} style={{ flex: 1, background: '#00000066' }} />
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: '#00000066' }} />
       <div style={{
+        position: 'relative', width: '100%', maxWidth: 600,
         background: 'var(--bg-2)', borderRadius: '20px 20px 0 0',
         padding: '24px 20px 36px', display: 'flex', flexDirection: 'column', gap: 20,
         borderTop: '1px solid var(--border)',
@@ -332,9 +334,10 @@ function RunForm({ onAdd, onClose }) {
   );
 }
 
-export function DayDetail({ dateKey, dayData, workoutTemplates, onUpdateDay, onAddWorkout, onAddRun, onRemoveWorkout, onRemoveRun, onSaveWorkoutTemplate, onNavigate, nextRunDate, nextRehabDate }) {
+export function DayDetail({ dateKey, dayData, workoutTemplates, onUpdateDay, onAddWorkout, onAddCustomWorkout, onAddRun, onRemoveWorkout, onRemoveRun, onSaveWorkoutTemplate, onNavigate, nextRunDate, nextRehabDate }) {
   const [addModal, setAddModal] = useState(null);
   const [showRunForm, setShowRunForm] = useState(false);
+  const [customWorkoutName, setCustomWorkoutName] = useState('');
 
   function updateWorkoutEntry(entryId, updated) {
     const workouts = dayData.workouts.map(w => w.id === entryId ? updated : w);
@@ -514,24 +517,58 @@ export function DayDetail({ dateKey, dayData, workoutTemplates, onUpdateDay, onA
 
       {/* Add Modals */}
       {addModal === 'workout' && (
-        <Modal title="Workout hinzufügen" onClose={() => setAddModal(null)}>
-          {workoutTemplates.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', fontSize: 14, textAlign: 'center', padding: '24px 0' }}>
-              Keine Workouts definiert. Erstelle erst Workout-Vorlagen in der Bibliothek.
-            </p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {workoutTemplates.map(tpl => (
-                <button key={tpl.id} onClick={() => { onAddWorkout(tpl.id); setAddModal(null); }} style={{
-                  background: 'var(--bg-4)', border: '1px solid var(--border-light)',
-                  borderRadius: 10, padding: '12px 16px', color: 'var(--text)', textAlign: 'left', cursor: 'pointer',
-                }}>
-                  <div style={{ fontWeight: 600, marginBottom: 2 }}>{tpl.name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{tpl.exercises.length} Übungen</div>
-                </button>
-              ))}
+        <Modal title="Workout hinzufügen" onClose={() => { setAddModal(null); setCustomWorkoutName(''); }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Quick custom entry */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ flex: 1 }}>
+                <Input
+                  value={customWorkoutName}
+                  onChange={setCustomWorkoutName}
+                  placeholder="Eigener Name, z.B. Lower Body"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  if (!customWorkoutName.trim()) return;
+                  onAddCustomWorkout(customWorkoutName.trim());
+                  setAddModal(null);
+                  setCustomWorkoutName('');
+                }}
+                disabled={!customWorkoutName.trim()}
+                style={{
+                  padding: '0 16px', borderRadius: 10, border: 'none',
+                  background: customWorkoutName.trim() ? 'var(--brand)' : 'var(--bg-4)',
+                  color: customWorkoutName.trim() ? '#000' : 'var(--text-dim)',
+                  fontWeight: 700, fontSize: 13, cursor: customWorkoutName.trim() ? 'pointer' : 'default',
+                  whiteSpace: 'nowrap', flexShrink: 0,
+                }}
+              >
+                + Hinzufügen
+              </button>
             </div>
-          )}
+
+            {workoutTemplates.length > 0 && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                  <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>oder aus Bibliothek</span>
+                  <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {workoutTemplates.map(tpl => (
+                    <button key={tpl.id} onClick={() => { onAddWorkout(tpl.id); setAddModal(null); }} style={{
+                      background: 'var(--bg-4)', border: '1px solid var(--border-light)',
+                      borderRadius: 10, padding: '12px 16px', color: 'var(--text)', textAlign: 'left', cursor: 'pointer',
+                    }}>
+                      <div style={{ fontWeight: 600, marginBottom: 2 }}>{tpl.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{tpl.exercises.length} Übungen</div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </Modal>
       )}
 

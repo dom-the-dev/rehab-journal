@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { toDateKey, painColor } from '../utils';
+import { toDateKey, painColor, WEEKDAYS_SHORT } from '../utils';
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle, Flame, Footprints, Dumbbell } from 'lucide-react';
 
 // ── helpers ──────────────────────────────────────────────────
@@ -144,6 +144,279 @@ function BarChart({ bars, height = 100, color = 'var(--brand)', maxVal }) {
   );
 }
 
+// ── monthly journal table ─────────────────────────────────────
+
+function getMonthWeeks(year, month) {
+  // Returns array of weeks (each = 7 dateKeys Mo–So) that overlap with the given month
+  const firstDay = new Date(year, month, 1);
+  const dow = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // 0=Mon
+  const start = new Date(year, month, 1 - dow); // Monday of first week
+
+  const weeks = [];
+  let cur = new Date(start);
+  while (cur.getFullYear() < year || cur.getMonth() < month || (cur.getMonth() === month && cur.getDate() <= new Date(year, month + 1, 0).getDate())) {
+    const week = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(cur);
+      d.setDate(d.getDate() + i);
+      return toDateKey(d);
+    });
+    weeks.push(week);
+    cur.setDate(cur.getDate() + 7);
+    if (weeks.length > 6) break;
+  }
+  return weeks;
+}
+
+const MONTHS_DE_SHORT = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+
+function printMonth(weeks, days, monthLabel) {
+  const painHex = v => {
+    if (v <= 2) return '#22c55e';
+    if (v <= 4) return '#84cc16';
+    if (v === 5) return '#f97316';
+    return '#ef4444';
+  };
+
+  const rows = weeks.map(week => week.map(key => {
+    const [, mm, dd] = key.split('-').map(Number);
+    const day = days[key];
+    const s1 = day?.s1 ?? null;
+    const activities = [
+      ...(day?.workouts || []).map(w => ({ type: 'workout', label: w.name, wb: w.wb ?? null, s2: w.s2 ?? null })),
+      ...(day?.runs || []).map(r => ({ type: 'run', label: `${r.distance}km`, wb: r.wb ?? null, s2: r.s2 ?? null })),
+    ];
+    const steps = day?.steps ? parseInt(day.steps) : null;
+    return { dd: String(dd).padStart(2,'0'), mm: String(mm).padStart(2,'0'), s1, activities, steps };
+  }));
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>RehabJournal – ${monthLabel}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; padding: 20px; color: #111; background: #fff; }
+  h1 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+  .sub { font-size: 11px; color: #888; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: separate; border-spacing: 4px; table-layout: fixed; }
+  th { font-size: 10px; font-weight: 700; color: #888; text-align: center; padding-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td { vertical-align: top; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; padding: 0; }
+  .bar { height: 4px; }
+  .inner { padding: 5px 5px 7px; }
+  .date { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+  .day { font-size: 13px; font-weight: 700; color: #111; }
+  .s1 { font-size: 13px; font-weight: 800; }
+  .act { font-size: 9px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wb-s2 { font-size: 9px; color: #888; padding-left: 10px; margin-bottom: 2px; }
+  .steps { font-size: 9px; color: #888; margin-top: 3px; }
+  @media print { body { padding: 10px; } }
+</style></head><body>
+<h1>RehabJournal</h1>
+<div class="sub">${monthLabel} · gedruckt ${new Date().toLocaleDateString('de-DE')}</div>
+<table>
+  <thead><tr>${['Mo','Di','Mi','Do','Fr','Sa','So'].map(d=>`<th>${d}</th>`).join('')}</tr></thead>
+  <tbody>
+  ${rows.map(week => `<tr>${week.map(({dd,mm,s1,activities,steps}) => {
+    const barColor = s1 !== null ? painHex(s1) : '#e5e7eb';
+    const s1Color = s1 !== null ? painHex(s1) : '';
+    return `<td>
+      <div class="bar" style="background:${barColor}"></div>
+      <div class="inner">
+        <div class="date">
+          <span class="day">${dd}.${mm}.</span>
+          ${s1 !== null ? `<span class="s1" style="color:${s1Color}">${s1}</span>` : ''}
+        </div>
+        ${activities.map(a => `
+          <div class="act" style="color:${a.type==='run'?'#0ea5e9':'#f97316'}">${a.type==='run'?'🏃':'🏋'} ${a.label}</div>
+          ${(a.wb!==null||a.s2!==null)?`<div class="wb-s2">${a.wb!==null?`WB<b style="color:${painHex(a.wb)}">${a.wb}</b> `:''}${a.s2!==null?`S2<b style="color:${painHex(a.s2)}">${a.s2}</b>`:''}</div>`:''}`).join('')}
+        ${steps!==null?`<div class="steps">👟 ${steps>=1000?(steps/1000).toFixed(1)+'k':steps}</div>`:''}
+      </div>
+    </td>`;
+  }).join('')}</tr>`).join('\n')}
+  </tbody>
+</table>
+<div style="margin-top:14px;font-size:10px;color:#aaa;display:flex;gap:16px">
+  <span>● S1 Wohlbefinden morgens (0–10)</span>
+  <span>WB = während Training · S2 = danach</span>
+  <span style="color:#22c55e">■ 0–2</span><span style="color:#84cc16">■ 3–4</span><span style="color:#f97316">■ 5</span><span style="color:#ef4444">■ 6+</span>
+</div>
+</body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 400);
+}
+
+function MonthlyTable({ days }) {
+  const now = new Date();
+  const [year, setYear] = React.useState(now.getFullYear());
+  const [month, setMonth] = React.useState(now.getMonth());
+  const todayKey = toDateKey(now);
+
+  function prevMonth() {
+    if (month === 0) { setMonth(11); setYear(y => y - 1); }
+    else setMonth(m => m - 1);
+  }
+  function nextMonth() {
+    if (month === 11) { setMonth(0); setYear(y => y + 1); }
+    else setMonth(m => m + 1);
+  }
+
+  const weeks = useMemo(() => getMonthWeeks(year, month), [year, month]);
+  const monthLabel = `${MONTHS_DE_SHORT[month]} ${year}`;
+
+  return (
+    <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 14, padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Journal</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={prevMonth} style={{ background: 'var(--bg-4)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-muted)', cursor: 'pointer', padding: '3px 10px', fontSize: 16, lineHeight: 1 }}>‹</button>
+          <span style={{ fontSize: 13, fontWeight: 700, minWidth: 72, textAlign: 'center' }}>{monthLabel}</span>
+          <button onClick={nextMonth} style={{ background: 'var(--bg-4)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-muted)', cursor: 'pointer', padding: '3px 10px', fontSize: 16, lineHeight: 1 }}>›</button>
+          <button onClick={() => printMonth(weeks, days, monthLabel)} style={{
+            background: 'var(--bg-4)', border: '1px solid var(--border)', borderRadius: 6,
+            color: 'var(--text-muted)', cursor: 'pointer', padding: '4px 10px', fontSize: 11, fontWeight: 600,
+          }}>🖨 Drucken</button>
+        </div>
+      </div>
+
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '3px 3px', tableLayout: 'fixed', minWidth: 380 }}>
+          <thead>
+            <tr>
+              {WEEKDAYS_SHORT.map(wd => (
+                <th key={wd} style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-dim)', textAlign: 'center', paddingBottom: 6 }}>{wd}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {weeks.map((week, wi) => (
+              <tr key={wi}>
+                {week.map(key => {
+                  const [y, mm, dd] = key.split('-').map(Number);
+                  const inMonth = y === year && (mm - 1) === month;
+                  const isToday = key === todayKey;
+                  const day = days[key];
+                  const s1 = day?.s1 ?? null;
+                  const workouts = day?.workouts || [];
+                  const runs = day?.runs || [];
+                  const steps = day?.steps ? parseInt(day.steps) : null;
+                  const hasActivity = workouts.length > 0 || runs.length > 0;
+                  const activities = [
+                    ...workouts.map(w => ({ type: 'workout', label: w.name, wb: w.wb ?? null, s2: w.s2 ?? null })),
+                    ...runs.map(r => ({ type: 'run', label: `${r.distance}km`, wb: r.wb ?? null, s2: r.s2 ?? null })),
+                  ];
+
+                  const s1Color = s1 !== null ? painColor(s1) : null;
+
+                  return (
+                    <td key={key} style={{
+                      verticalAlign: 'top',
+                      opacity: inMonth ? 1 : 0.2,
+                      background: isToday ? '#ffffff08' : 'var(--bg-4)',
+                      borderRadius: 8,
+                      border: isToday ? '1px solid var(--brand)66' : '1px solid transparent',
+                      overflow: 'hidden',
+                      padding: 0,
+                    }}>
+                      {/* S1 color bar at top */}
+                      <div style={{
+                        height: 3,
+                        background: s1 !== null ? painColor(s1) : 'var(--border)',
+                        opacity: s1 !== null ? 0.8 : 0.3,
+                      }} />
+
+                      <div style={{ padding: '5px 4px 6px' }}>
+                        {/* Date with leading zero */}
+                        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span style={{
+                            fontSize: 12, fontWeight: 700,
+                            color: isToday ? 'var(--brand)' : inMonth ? 'var(--text)' : 'var(--text-dim)',
+                          }}>{String(dd).padStart(2,'0')}.</span>
+                          {/* S1 value */}
+                          {s1 !== null && (
+                            <span style={{ fontSize: 12, fontWeight: 800, color: s1Color }}>{s1}</span>
+                          )}
+                        </div>
+
+                        {/* Activities */}
+                        {activities.map((a, i) => (
+                          <div key={i} style={{ marginBottom: 3 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <span style={{ fontSize: 10 }}>{a.type === 'run' ? '🏃' : '🏋'}</span>
+                              <span style={{
+                                fontSize: 10, fontWeight: 600, flex: 1,
+                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                color: a.type === 'run' ? '#38bdf8' : 'var(--brand)',
+                              }}>{a.label}</span>
+                            </div>
+                            {(a.wb !== null || a.s2 !== null) && (
+                              <div style={{ display: 'flex', gap: 4, paddingLeft: 12, marginTop: 1 }}>
+                                {a.wb !== null && (
+                                  <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>
+                                    WB<span style={{ fontWeight: 700, color: painColor(a.wb) }}>{a.wb}</span>
+                                  </span>
+                                )}
+                                {a.s2 !== null && (
+                                  <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>
+                                    S2<span style={{ fontWeight: 700, color: painColor(a.s2) }}>{a.s2}</span>
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+
+                        {/* Steps */}
+                        {steps !== null && (
+                          <div style={{ marginTop: hasActivity ? 3 : 0 }}>
+                            <span style={{
+                              fontSize: 10, fontWeight: 600,
+                              color: steps >= 8000 ? 'var(--green)' : steps >= 5000 ? 'var(--brand)' : 'var(--text-dim)',
+                            }}>👟{steps >= 1000 ? `${(steps/1000).toFixed(1)}k` : steps}</span>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Legend */}
+      <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+        <span style={{ fontSize: 10, color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>Legende</span>
+        {[
+          { color: 'var(--green)', label: 'S1 0–2' },
+          { color: '#84cc16', label: 'S1 3–4' },
+          { color: 'var(--orange)', label: 'S1 5' },
+          { color: 'var(--red)', label: 'S1 6+' },
+        ].map(({ color, label }) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ width: 16, height: 3, borderRadius: 2, background: color }} />
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{label}</span>
+          </div>
+        ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 10 }}>🏋</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Workout</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 10 }}>🏃</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Lauf</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 10 }}>👟</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Schritte</span>
+        </div>
+        <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>WB = während · S2 = danach</span>
+      </div>
+    </div>
+  );
+}
+
 // ── main component ────────────────────────────────────────────
 
 export function Stats({ days, workoutTemplates }) {
@@ -238,6 +511,9 @@ export function Stats({ days, workoutTemplates }) {
           </div>
         </div>
       )}
+
+      {/* Monthly journal table */}
+      <MonthlyTable days={days} />
 
       {/* Quick stats */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>

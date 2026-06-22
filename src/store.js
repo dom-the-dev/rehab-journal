@@ -107,6 +107,20 @@ export function useStore() {
     updateDay(dateKey, { workouts: [...(day.workouts || []), entry] });
   }
 
+  function addCustomWorkoutToDay(dateKey, name) {
+    const day = getDay(dateKey);
+    const entry = {
+      id: Date.now().toString(),
+      templateId: null,
+      name,
+      exercises: [],
+      setsChecked: {},
+      wb: null,
+      s2: null,
+    };
+    updateDay(dateKey, { workouts: [...(day.workouts || []), entry] });
+  }
+
   function addRunToDay(dateKey, runId) {
     const tpl = data.runTemplates.find(r => r.id === runId);
     if (!tpl) return;
@@ -181,7 +195,7 @@ export function useStore() {
     status,
     getDay,
     updateDay,
-    addWorkoutToDay, addRunToDay, addDirectRunToDay,
+    addWorkoutToDay, addCustomWorkoutToDay, addRunToDay, addDirectRunToDay,
     removeWorkoutFromDay, removeRunFromDay,
     saveWorkoutTemplate, deleteWorkoutTemplate,
     saveRunTemplate, deleteRunTemplate,

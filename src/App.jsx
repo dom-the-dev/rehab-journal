@@ -144,6 +144,7 @@ export default function App() {
             workoutTemplates={store.workoutTemplates}
             onUpdateDay={patch => store.updateDay(selectedDay, patch)}
             onAddWorkout={id => store.addWorkoutToDay(selectedDay, id)}
+            onAddCustomWorkout={name => store.addCustomWorkoutToDay(selectedDay, name)}
             onAddRun={data => store.addDirectRunToDay(selectedDay, data)}
             onRemoveWorkout={id => store.removeWorkoutFromDay(selectedDay, id)}
             onRemoveRun={id => store.removeRunFromDay(selectedDay, id)}
@@ -155,7 +156,6 @@ export default function App() {
         )}
         {view === 'stats' && <Stats days={store.days} workoutTemplates={store.workoutTemplates} />}
         {view === 'workouts' && <WorkoutLibrary workoutTemplates={store.workoutTemplates} onSave={store.saveWorkoutTemplate} onDelete={store.deleteWorkoutTemplate} />}
-        {view === 'runs' && <RunLibrary runTemplates={store.runTemplates} onSave={store.saveRunTemplate} onDelete={store.deleteRunTemplate} />}
       </main>
 
       {/* Bottom tab bar */}

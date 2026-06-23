@@ -5,7 +5,17 @@ import { Calendar } from './components/Calendar';
 import { DayDetail } from './components/DayDetail';
 import { WorkoutLibrary } from './components/WorkoutLibrary';
 import { useIsMobile } from './hooks/useIsMobile';
-import { Activity, Dumbbell, CalendarDays, Cloud, CloudOff, Loader, ChevronLeft } from 'lucide-react';
+import { Activity, Dumbbell, CalendarDays, Cloud, CloudOff, Loader, ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatDate, toDateKey } from './utils';
+
+function offsetDate(dateKey, days) {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const date = new Date(y, m - 1, d + days);
+  const yy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
 import { RehabInfo } from './components/RehabInfo';
 import { Stats } from './components/Stats';
 
@@ -129,6 +139,35 @@ export default function App() {
         </span>
         <SyncIndicator status={store.status} />
       </header>
+
+      {/* Sticky day nav — mobile only, shown when in day view */}
+      {view === 'journal' && mobileScreen === 'day' && (
+        <div style={{
+          position: 'sticky', top: 52, zIndex: 40,
+          background: 'var(--bg-2)', borderBottom: '1px solid var(--border)',
+          padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <button onClick={() => setSelectedDay(offsetDate(selectedDay, -1))} style={{
+            background: 'var(--bg-4)', border: '1px solid var(--border)', borderRadius: 8,
+            color: 'var(--text-muted)', cursor: 'pointer', padding: '6px 10px',
+            display: 'flex', alignItems: 'center', flexShrink: 0,
+            WebkitTapHighlightColor: 'transparent',
+          }}>
+            <ChevronLeft size={16} />
+          </button>
+          <div style={{ flex: 1, textAlign: 'center', fontWeight: 800, fontSize: 14 }}>
+            {formatDate(selectedDay)}
+          </div>
+          <button onClick={() => setSelectedDay(offsetDate(selectedDay, 1))} style={{
+            background: 'var(--bg-4)', border: '1px solid var(--border)', borderRadius: 8,
+            color: 'var(--text-muted)', cursor: 'pointer', padding: '6px 10px',
+            display: 'flex', alignItems: 'center', flexShrink: 0,
+            WebkitTapHighlightColor: 'transparent',
+          }}>
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
 
       {/* Content */}
       <main style={{ flex: 1, padding: '16px', overflowY: 'auto' }}>

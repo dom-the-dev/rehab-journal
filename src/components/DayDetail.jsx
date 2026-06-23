@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { formatDate, painColor, toDateKey } from '../utils';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { PainScale } from './PainScale';
 import { Btn, Input, Textarea, Modal } from './ui';
 import { Plus, Trash2, Dumbbell, Footprints, Check, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Moon, StickyNote } from 'lucide-react';
@@ -349,11 +350,13 @@ export function DayDetail({ dateKey, dayData, workoutTemplates, onUpdateDay, onA
     onUpdateDay({ runs });
   }
 
+  const isMobile = useIsMobile();
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Date header with prev/next */}
-      <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+      {/* Date header — desktop only (mobile nav is handled by App.jsx sticky bar) */}
+      {!isMobile && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button onClick={() => onNavigate(offsetDate(dateKey, -1))} style={{
             background: 'var(--bg-4)', border: '1px solid var(--border)', borderRadius: 8,
             color: 'var(--text-muted)', cursor: 'pointer', padding: '6px 8px', display: 'flex', alignItems: 'center',
@@ -370,21 +373,23 @@ export function DayDetail({ dateKey, dayData, workoutTemplates, onUpdateDay, onA
             <ChevronRight size={16} />
           </button>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-          <PainBadge label="S1" value={dayData.s1} />
-          {dayData.workouts?.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-4)', borderRadius: 8, padding: '4px 10px' }}>
-              <Dumbbell size={12} color="var(--brand)" />
-              <span style={{ fontSize: 11, color: 'var(--brand)', fontWeight: 600 }}>{dayData.workouts.length}x Workout</span>
-            </div>
-          )}
-          {dayData.runs?.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-4)', borderRadius: 8, padding: '4px 10px' }}>
-              <Footprints size={12} color="#38bdf8" />
-              <span style={{ fontSize: 11, color: '#38bdf8', fontWeight: 600 }}>{dayData.runs.length}x Lauf</span>
-            </div>
-          )}
-        </div>
+      )}
+
+      {/* Day summary badges */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <PainBadge label="S1" value={dayData.s1} />
+        {dayData.workouts?.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-4)', borderRadius: 8, padding: '4px 10px' }}>
+            <Dumbbell size={12} color="var(--brand)" />
+            <span style={{ fontSize: 11, color: 'var(--brand)', fontWeight: 600 }}>{dayData.workouts.length}x Workout</span>
+          </div>
+        )}
+        {dayData.runs?.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg-4)', borderRadius: 8, padding: '4px 10px' }}>
+            <Footprints size={12} color="#38bdf8" />
+            <span style={{ fontSize: 11, color: '#38bdf8', fontWeight: 600 }}>{dayData.runs.length}x Lauf</span>
+          </div>
+        )}
       </div>
 
       {/* Due-date banners */}

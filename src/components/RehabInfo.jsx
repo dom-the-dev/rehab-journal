@@ -1,5 +1,5 @@
 import React from 'react';
-import { Footprints, TrendingUp, AlertCircle } from 'lucide-react';
+import { Footprints, Dumbbell, TrendingUp, AlertCircle } from 'lucide-react';
 
 export function RehabInfo() {
   return (
@@ -24,6 +24,13 @@ export function RehabInfo() {
           <Footprints size={14} color="#38bdf8" style={{ marginTop: 1, flexShrink: 0 }} />
           <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
             <span style={{ color: 'var(--text)', fontWeight: 600 }}>Laufen alle 3 Tage</span>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+          <Dumbbell size={14} color="var(--brand)" style={{ marginTop: 1, flexShrink: 0 }} />
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            <span style={{ color: 'var(--text)', fontWeight: 600 }}>Rehab-Workout alle 3 Tage</span>
           </div>
         </div>
 

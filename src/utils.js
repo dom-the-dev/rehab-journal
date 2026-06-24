@@ -66,6 +66,51 @@ export function painMoodLabel(val) {
   return map[val] ?? '';
 }
 
+export function getLastRun(days) {
+  const sortedKeys = Object.keys(days).sort().reverse();
+  for (const dateKey of sortedKeys) {
+    const day = days[dateKey];
+    if (day.runs?.length > 0) {
+      const run = day.runs[day.runs.length - 1];
+      return {
+        dateKey,
+        distance: parseFloat(run.distance) || 0,
+        wb: run.wb ?? null,
+        s2: run.s2 ?? null,
+        name: run.name,
+      };
+    }
+  }
+  return null;
+}
+
+export function getRunRecommendation(lastRun, days) {
+  if (!lastRun) return null;
+  const { distance, wb, dateKey: runDateKey } = lastRun;
+
+  // Collect S1 values from days strictly between last run and today
+  const todayKey = today();
+  const s1Values = Object.entries(days)
+    .filter(([k]) => k > runDateKey && k <= todayKey)
+    .map(([, d]) => d.s1)
+    .filter(v => v !== null && v !== undefined);
+  const maxS1 = s1Values.length > 0 ? Math.max(...s1Values) : null;
+
+  const runOk = wb !== null && wb <= 3;
+  const daysOk = maxS1 === null || maxS1 <= 3;
+
+  if (wb === null && maxS1 === null) {
+    return { label: `Letzte Distanz: ${distance} km`, color: 'var(--text-muted)', maxS1, wb };
+  }
+  if (runOk && daysOk) {
+    return { label: `Steigern → ${(distance + 0.5).toFixed(1)} km`, color: 'var(--green)', maxS1, wb };
+  }
+  if (wb !== null && wb <= 5 && (maxS1 === null || maxS1 <= 5)) {
+    return { label: `Distanz halten → ${distance} km`, color: 'var(--orange)', maxS1, wb };
+  }
+  return { label: `Beschwerden zu hoch — ${distance} km halten`, color: 'var(--red)', maxS1, wb };
+}
+
 export function getNextDueDate(days, workoutTemplates, type) {
   // type: 'run' | 'rehab'
   const rehabIds = new Set(

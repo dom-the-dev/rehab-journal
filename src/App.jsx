@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useStore } from './store';
-import { today, getNextDueDate } from './utils';
+import { today, getNextDueDate, getLastRun, getRunRecommendation, formatDate, toDateKey } from './utils';
 import { Calendar } from './components/Calendar';
 import { DayDetail } from './components/DayDetail';
 import { WorkoutLibrary } from './components/WorkoutLibrary';
 import { useIsMobile } from './hooks/useIsMobile';
 import { Activity, Dumbbell, CalendarDays, Cloud, CloudOff, Loader, ChevronLeft, ChevronRight } from 'lucide-react';
-import { formatDate, toDateKey } from './utils';
 
 function offsetDate(dateKey, days) {
   const [y, m, d] = dateKey.split('-').map(Number);
@@ -52,6 +51,8 @@ export default function App() {
   const dayData = store.getDay(selectedDay);
   const nextRunDate = getNextDueDate(store.days, store.workoutTemplates, 'run');
   const nextRehabDate = getNextDueDate(store.days, store.workoutTemplates, 'rehab');
+  const lastRun = getLastRun(store.days);
+  const runRec = getRunRecommendation(lastRun, store.days);
 
   function handleSelectDay(dateKey) {
     setSelectedDay(dateKey);
@@ -109,6 +110,7 @@ export default function App() {
                 onNavigate={setSelectedDay}
                 nextRunDate={nextRunDate}
                 nextRehabDate={nextRehabDate}
+                runRec={runRec}
               />
             </div>
           )}
@@ -191,6 +193,7 @@ export default function App() {
             onNavigate={setSelectedDay}
             nextRunDate={nextRunDate}
             nextRehabDate={nextRehabDate}
+            runRec={runRec}
           />
         )}
         {view === 'stats' && <Stats days={store.days} workoutTemplates={store.workoutTemplates} />}

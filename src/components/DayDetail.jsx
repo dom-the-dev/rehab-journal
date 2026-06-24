@@ -335,7 +335,7 @@ function RunForm({ onAdd, onClose }) {
   );
 }
 
-export function DayDetail({ dateKey, dayData, workoutTemplates, onUpdateDay, onAddWorkout, onAddCustomWorkout, onAddRun, onRemoveWorkout, onRemoveRun, onSaveWorkoutTemplate, onNavigate, nextRunDate, nextRehabDate }) {
+export function DayDetail({ dateKey, dayData, workoutTemplates, onUpdateDay, onAddWorkout, onAddCustomWorkout, onAddRun, onRemoveWorkout, onRemoveRun, onSaveWorkoutTemplate, onNavigate, nextRunDate, nextRehabDate, runRec }) {
   const [addModal, setAddModal] = useState(null);
   const [showRunForm, setShowRunForm] = useState(false);
   const [customWorkoutName, setCustomWorkoutName] = useState('');
@@ -397,15 +397,41 @@ export function DayDetail({ dateKey, dayData, workoutTemplates, onUpdateDay, onA
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {dateKey === nextRunDate && (
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 10,
               background: '#38bdf815', border: '1px solid #38bdf840',
-              borderRadius: 10, padding: '10px 14px',
+              borderRadius: 10, padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 6,
             }}>
-              <Footprints size={16} color="#38bdf8" />
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#38bdf8' }}>Lauf fällig heute</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Letzter Lauf war vor 3 Tagen</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Footprints size={16} color="#38bdf8" />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#38bdf8' }}>Lauf fällig heute</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Letzter Lauf war vor 3 Tagen</div>
+                </div>
               </div>
+              {runRec && (
+                <div style={{ marginLeft: 26, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{
+                    fontSize: 12, fontWeight: 700, color: runRec.color,
+                    background: runRec.color + '18', borderRadius: 6, padding: '4px 8px',
+                    alignSelf: 'flex-start',
+                  }}>
+                    {runRec.label}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      WB letzter Lauf:{' '}
+                      <span style={{ fontWeight: 700, color: runRec.wb !== null ? (runRec.wb <= 3 ? 'var(--green)' : runRec.wb <= 5 ? 'var(--orange)' : 'var(--red)') : 'var(--text-dim)' }}>
+                        {runRec.wb !== null ? runRec.wb : '–'}
+                      </span>
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      S1 seitdem max:{' '}
+                      <span style={{ fontWeight: 700, color: runRec.maxS1 !== null ? (runRec.maxS1 <= 3 ? 'var(--green)' : runRec.maxS1 <= 5 ? 'var(--orange)' : 'var(--red)') : 'var(--text-dim)' }}>
+                        {runRec.maxS1 !== null ? runRec.maxS1 : '–'}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {dateKey === nextRehabDate && (
